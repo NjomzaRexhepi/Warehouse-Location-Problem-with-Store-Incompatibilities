@@ -20,13 +20,15 @@ public class MiniZincParser {
         ProblemInstance instance = new ProblemInstance();
         List<String> lines = new ArrayList<>();
 
+        // Read the file
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
             while ((line = br.readLine()) != null) {
-                lines.add(line.replace("|", "").trim()); // Remove "|"
+                lines.add(line.trim()); // Trim spaces but preserve "|"
             }
         }
 
+        // Parse each line
         instance.warehouses = extractSingleValue(lines.get(0));
         instance.stores = extractSingleValue(lines.get(1));
         instance.capacity = extractList(lines.get(2));
@@ -35,8 +37,8 @@ public class MiniZincParser {
 
         int supplyCostStart = 5;
         int supplyCostEnd = supplyCostStart + instance.stores; // Store count determines matrix size
-
         instance.supplyCost = extractMatrix(lines.subList(supplyCostStart, supplyCostEnd));
+
         instance.incompatibilities = extractSingleValue(lines.get(supplyCostEnd));
         instance.incompatiblePairs = extractPairs(lines.get(supplyCostEnd + 1));
 
@@ -77,22 +79,16 @@ public class MiniZincParser {
     private static List<int[]> extractPairs(String line) {
         List<int[]> pairs = new ArrayList<>();
 
-        // Remove `[|` and `|]` and trim spaces
         line = line.replace("[|", "").replace("|]", "").trim();
 
-        // Split by "|" to separate pairs
         String[] pairStrings = line.split("\\|");
         for (String pairString : pairStrings) {
-            // Trim any leading or trailing spaces
             pairString = pairString.trim();
             if (!pairString.isEmpty()) {
-                // Remove the square brackets `[` and `]`
-                pairString = pairString.replace("[", "").replace("]", "").trim();
+                pairString = pairString.replaceAll("[^0-9,]", "").trim();
 
-                // Split by "," to get the individual numbers
                 String[] numbers = pairString.split(",");
                 if (numbers.length == 2) {
-                    // Parse the numbers and add to the pairs list
                     int first = Integer.parseInt(numbers[0].trim());
                     int second = Integer.parseInt(numbers[1].trim());
                     pairs.add(new int[]{first, second});
@@ -112,7 +108,10 @@ public class MiniZincParser {
             System.out.println("Goods: " + instance.goods);
             System.out.println("Supply Cost: " + Arrays.deepToString(instance.supplyCost));
             System.out.println("Incompatibilities: " + instance.incompatibilities);
-            System.out.println("Incompatible Pairs: " + instance.incompatiblePairs);
+            System.out.print("Incompatible Pairs: ");
+            for (int[] pair : instance.incompatiblePairs) {
+                System.out.print(Arrays.toString(pair) +", ");
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
