@@ -1,1 +1,1 @@
-# -Warehouse-Location-Problem-with-Store-Incompatibilities
+ Warehouse Location Problem with Store Incompatibilities
