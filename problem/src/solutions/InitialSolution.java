@@ -21,6 +21,7 @@ public class InitialSolution {
     int[][] supplyCost;
     List<int[]> incompatiblePairs = new ArrayList<>();
 
+    // First constraint (check if warehouse capacity exceeded)
     public void generateInitialSolution(InstanceData problemInstance) {
         Random random = new Random();
         int[] usedCapacity = new int[problemInstance.getWarehouses()];
