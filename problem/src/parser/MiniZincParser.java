@@ -3,7 +3,6 @@ package problem.src.parser;
 import java.io.*;
 import java.util.*;
 import java.util.regex.*;
-
 class ProblemInstance {
     int warehouses;
     int stores;
