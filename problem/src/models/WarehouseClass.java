@@ -4,7 +4,7 @@ public class WarehouseClass {
     int id;
     int capacity;
     int openingCost;
-    boolean isOpen;
+    public boolean isOpen;
 
     public WarehouseClass(int id, int capacity, int openingCost) {
         this.id = id;
