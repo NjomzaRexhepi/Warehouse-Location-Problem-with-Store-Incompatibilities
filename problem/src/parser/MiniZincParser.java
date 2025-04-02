@@ -1,22 +1,15 @@
 package problem.src.parser;
 
+import problem.src.models.InstanceData;
+import problem.src.solutions.InitialSolution;
+
 import java.io.*;
 import java.util.*;
 import java.util.regex.*;
-class ProblemInstance {
-    int warehouses;
-    int stores;
-    List<Integer> capacity;
-    List<Integer> fixedCost;
-    List<Integer> goods;
-    int[][] supplyCost;
-    int incompatibilities;
-    List<int[]> incompatiblePairs;
-}
 
 public class MiniZincParser {
-    public static ProblemInstance parseFile(String filePath) throws IOException {
-        ProblemInstance instance = new ProblemInstance();
+    public static InstanceData parseFile(String filePath) throws IOException {
+        InstanceData instance = new InstanceData();
         List<String> lines = new ArrayList<>();
 
         // Read the file
@@ -27,19 +20,18 @@ public class MiniZincParser {
             }
         }
 
-        // Parse each line
-        instance.warehouses = extractSingleValue(lines.get(0));
-        instance.stores = extractSingleValue(lines.get(1));
-        instance.capacity = extractList(lines.get(2));
-        instance.fixedCost = extractList(lines.get(3));
-        instance.goods = extractList(lines.get(4));
+        instance.setWarehouses(extractSingleValue(lines.get(0)));
+        instance.setStores(extractSingleValue(lines.get(1)));
+        instance.setCapacity(extractList(lines.get(2)));
+        instance.setFixedCost(extractList(lines.get(3)));
+        instance.setGoods(extractList(lines.get(4)));
 
         int supplyCostStart = 5;
-        int supplyCostEnd = supplyCostStart + instance.stores; // Store count determines matrix size
-        instance.supplyCost = extractMatrix(lines.subList(supplyCostStart, supplyCostEnd));
+        int supplyCostEnd = supplyCostStart + instance.getStores();
+        instance.setSupplyCost(extractMatrix(lines.subList(supplyCostStart, supplyCostEnd)));
 
-        instance.incompatibilities = extractSingleValue(lines.get(supplyCostEnd));
-        instance.incompatiblePairs = extractPairs(lines.get(supplyCostEnd + 1));
+        instance.setIncompatibilities(extractSingleValue(lines.get(supplyCostEnd)));
+        instance.setIncompatiblePairs(extractPairs(lines.get(supplyCostEnd + 1)));
 
         return instance;
     }
@@ -99,18 +91,23 @@ public class MiniZincParser {
 
     public static void main(String[] args) {
         try {
-            ProblemInstance instance = parseFile("problem/src/inputs/input1.txt");
-            System.out.println("Warehouses: " + instance.warehouses);
-            System.out.println("Stores: " + instance.stores);
-            System.out.println("Capacity: " + instance.capacity);
-            System.out.println("Fixed Cost: " + instance.fixedCost);
-            System.out.println("Goods: " + instance.goods);
-            System.out.println("Supply Cost: " + Arrays.deepToString(instance.supplyCost));
-            System.out.println("Incompatibilities: " + instance.incompatibilities);
+            InstanceData instance = parseFile("problem/src/inputs/input1.txt");
+            System.out.println("Warehouses: " + instance.getWarehouses());
+            System.out.println("Stores: " + instance.getStores());
+            System.out.println("Capacity: " + instance.getCapacity());
+            System.out.println("Fixed Cost: " + instance.getFixedCost());
+            System.out.println("Goods: " + instance.getGoods());
+            System.out.println("Supply Cost: " + Arrays.deepToString(instance.getSupplyCost()));
+            System.out.println("Incompatibilities: " + instance.getIncompatibilities());
             System.out.print("Incompatible Pairs: ");
-            for (int[] pair : instance.incompatiblePairs) {
+            for (int[] pair : instance.getIncompatiblePairs()) {
                 System.out.print(Arrays.toString(pair) +", ");
             }
+
+            InitialSolution initialSolution = new InitialSolution();
+            initialSolution.generateInitialSolution(instance);
+
+            System.out.println(initialSolution);
         } catch (IOException e) {
             e.printStackTrace();
         }
