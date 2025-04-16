@@ -3,6 +3,8 @@ package problem.src.solutions;
 import problem.src.models.InstanceData;
 import problem.src.models.StoreClass;
 import problem.src.models.WarehouseClass;
+import problem.src.models.SupplyClass;
+
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -70,6 +72,8 @@ public class Solver {
         }
 
         writeSolution(solutionMatrix, nStores, nWarehouses);
+        printScore(instance, solutionMatrix);
+
     }
 
     private static boolean canAssignStore(int storeIndex, Set<Integer> assignedStores, List<int[]> incompatiblePairs) {
@@ -115,4 +119,74 @@ public class Solver {
             e.printStackTrace();
         }
     }
+
+    private static int[][] buildCostMatrix(InstanceData instance, int nStores, int nWarehouses) {
+        int[][] costMatrix = new int[nStores][nWarehouses];
+        // Initialize costMatrix to zeros (default)
+
+        for (SupplyClass sc : instance.getSupplyList()) {
+            int storeId = sc.getStoreId();       // expected to be 1-based
+            int warehouseId = sc.getWarehouseId(); // expected to be 1-based
+            int cost = sc.getCost();
+
+            int storeIndex = storeId - 1;
+            int warehouseIndex = warehouseId - 1;
+
+            // Check bounds. If either index is out of bounds or negative, print a warning and skip.
+            if (storeIndex < 0 || storeIndex >= nStores) {
+                System.err.println("Warning: storeId " + storeId + " produces index " + storeIndex +
+                        ", which is out of bounds (nStores=" + nStores + "). Skipping this record.");
+                continue;
+            }
+            if (warehouseIndex < 0 || warehouseIndex >= nWarehouses) {
+                System.err.println("Warning: warehouseId " + warehouseId + " produces index " + warehouseIndex +
+                        ", which is out of bounds (nWarehouses=" + nWarehouses + "). Skipping this record.");
+                continue;
+            }
+            costMatrix[storeIndex][warehouseIndex] = cost;
+        }
+        return costMatrix;
+    }
+
+
+    public static void printScore(InstanceData instance, int[][] solutionMatrix) {
+        int totalSupplyCost = 0;
+        int totalFixedCost = 0;
+
+        List<WarehouseClass> warehouses = instance.getWarehouseList();
+        int nStores = solutionMatrix.length;
+        int nWarehouses = warehouses.size();
+
+        // Build the cost matrix from the supply list.
+        int[][] costMatrix = buildCostMatrix(instance, nStores, nWarehouses);
+
+        // Calculate supply cost.
+        for (int i = 0; i < nStores; i++) {
+            for (int j = 0; j < nWarehouses; j++) {
+                int quantity = solutionMatrix[i][j];
+                totalSupplyCost += quantity * costMatrix[i][j];
+            }
+        }
+
+        // Calculate fixed (opening) cost for warehouses that supply at least one store.
+        for (int j = 0; j < nWarehouses; j++) {
+            boolean isOpen = false;
+            for (int i = 0; i < nStores; i++) {
+                if (solutionMatrix[i][j] > 0) {
+                    isOpen = true;
+                    break;
+                }
+            }
+            if (isOpen) {
+                totalFixedCost += warehouses.get(j).getOpeningCost();
+            }
+        }
+
+        int totalCost = totalSupplyCost + totalFixedCost;
+        System.out.println("Total Supply Cost: " + totalSupplyCost);
+        System.out.println("Total Opening Cost: " + totalFixedCost);
+        System.out.println("Total Score (Cost): " + totalCost);
+    }
+
+
 }
