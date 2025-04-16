@@ -1,76 +1,46 @@
 package problem.src.models;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class InstanceData {
-    int warehouses;
-    int stores;
-    List<Integer> capacity;
-    List<Integer> fixedCost;
-    List<Integer> goods;
-    int[][] supplyCost;
+    private List<WarehouseClass> warehouseList;
+    private List<StoreClass> storeList;
+    private List<SupplyClass> supplyList;
+    private int incompatibilities;
+    private List<int[]> incompatiblePairs;
 
-    public InstanceData(int warehouses, int stores, List<Integer> capacity, List<Integer> fixedCost, List<Integer> goods, int[][] supplyCost, int incompatibilities, List<int[]> incompatiblePairs) {
-        this.warehouses = warehouses;
-        this.stores = stores;
-        this.capacity = capacity;
-        this.fixedCost = fixedCost;
-        this.goods = goods;
-        this.supplyCost = supplyCost;
-        this.incompatibilities = incompatibilities;
-        this.incompatiblePairs = incompatiblePairs;
-    }
-
+    // Constructor
     public InstanceData() {
-
+        this.warehouseList = new ArrayList<>();
+        this.storeList = new ArrayList<>();
+        this.supplyList = new ArrayList<>();
+        this.incompatiblePairs = new ArrayList<>();
     }
 
-    public int getWarehouses() {
-        return warehouses;
+    // Getters and Setters
+    public List<WarehouseClass> getWarehouseList() {
+        return warehouseList;
     }
 
-    public void setWarehouses(int warehouses) {
-        this.warehouses = warehouses;
+    public void setWarehouseList(List<WarehouseClass> warehouseList) {
+        this.warehouseList = warehouseList;
     }
 
-    public int getStores() {
-        return stores;
+    public List<StoreClass> getStoreList() {
+        return storeList;
     }
 
-    public void setStores(int stores) {
-        this.stores = stores;
+    public void setStoreList(List<StoreClass> storeList) {
+        this.storeList = storeList;
     }
 
-    public List<Integer> getCapacity() {
-        return capacity;
+    public List<SupplyClass> getSupplyList() {
+        return supplyList;
     }
 
-    public void setCapacity(List<Integer> capacity) {
-        this.capacity = capacity;
-    }
-
-    public List<Integer> getFixedCost() {
-        return fixedCost;
-    }
-
-    public void setFixedCost(List<Integer> fixedCost) {
-        this.fixedCost = fixedCost;
-    }
-
-    public List<Integer> getGoods() {
-        return goods;
-    }
-
-    public void setGoods(List<Integer> goods) {
-        this.goods = goods;
-    }
-
-    public int[][] getSupplyCost() {
-        return supplyCost;
-    }
-
-    public void setSupplyCost(int[][] supplyCost) {
-        this.supplyCost = supplyCost;
+    public void setSupplyList(List<SupplyClass> supplyList) {
+        this.supplyList = supplyList;
     }
 
     public int getIncompatibilities() {
@@ -88,8 +58,4 @@ public class InstanceData {
     public void setIncompatiblePairs(List<int[]> incompatiblePairs) {
         this.incompatiblePairs = incompatiblePairs;
     }
-
-    int incompatibilities;
-    List<int[]> incompatiblePairs;
-
 }

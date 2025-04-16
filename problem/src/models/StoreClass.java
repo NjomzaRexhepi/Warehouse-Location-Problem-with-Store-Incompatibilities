@@ -17,4 +17,9 @@ public class StoreClass {
     public void addIncompatibleStore(int storeId) {
         incompatibleStores.add(storeId);
     }
+
+    // Add getters if needed
+    public int getId() { return id; }
+    public int getDemand() { return demand; }
+    public Set<Integer> getIncompatibleStores() { return incompatibleStores; }
 }

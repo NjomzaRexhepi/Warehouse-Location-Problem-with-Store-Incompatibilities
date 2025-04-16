@@ -1,8 +1,6 @@
 package problem.src.parser;
 
-import problem.src.models.InstanceData;
-import problem.src.solutions.InitialSolution;
-
+import problem.src.models.*;
 import java.io.*;
 import java.util.*;
 import java.util.regex.*;
@@ -16,26 +14,60 @@ public class MiniZincParser {
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
             while ((line = br.readLine()) != null) {
-                lines.add(line.trim()); // Trim spaces but preserve "|"
+                lines.add(line.trim());
             }
         }
 
-        instance.setWarehouses(extractSingleValue(lines.get(0)));
-        instance.setStores(extractSingleValue(lines.get(1)));
-        instance.setCapacity(extractList(lines.get(2)));
-        instance.setFixedCost(extractList(lines.get(3)));
-        instance.setGoods(extractList(lines.get(4)));
+        // Parse warehouse data (capacity and fixed costs)
+        List<Integer> capacities = extractList(lines.get(2));
+        List<Integer> fixedCosts = extractList(lines.get(3));
+        List<WarehouseClass> warehouses = new ArrayList<>();
+        for (int i = 0; i < capacities.size(); i++) {
+            warehouses.add(new WarehouseClass(i, capacities.get(i), fixedCosts.get(i)));
+        }
+        instance.setWarehouseList(warehouses);
 
+        // Parse store data (goods/demand)
+        List<Integer> goods = extractList(lines.get(4));
+        List<StoreClass> stores = new ArrayList<>();
+        for (int i = 0; i < goods.size(); i++) {
+            stores.add(new StoreClass(i, goods.get(i)));
+        }
+        instance.setStoreList(stores);
+
+        // Parse supply costs
         int supplyCostStart = 5;
-        int supplyCostEnd = supplyCostStart + instance.getStores();
-        instance.setSupplyCost(extractMatrix(lines.subList(supplyCostStart, supplyCostEnd)));
+        int supplyCostEnd = supplyCostStart + stores.size(); // Use store list size instead of stores count
+        int[][] supplyCostMatrix = extractMatrix(lines.subList(supplyCostStart, supplyCostEnd));
+        List<SupplyClass> supplies = new ArrayList<>();
+        for (int i = 0; i < warehouses.size(); i++) {
+            for (int j = 0; j < stores.size(); j++) {
+                supplies.add(new SupplyClass(i, j, 0, supplyCostMatrix[j][i])); // quantity set to 0 initially
+            }
+        }
+        instance.setSupplyList(supplies);
 
-        instance.setIncompatibilities(extractSingleValue(lines.get(supplyCostEnd)));
-        instance.setIncompatiblePairs(extractPairs(lines.get(supplyCostEnd + 1)));
+        // Parse incompatibilities
+        int incompatCount = extractSingleValue(lines.get(supplyCostEnd));
+        instance.setIncompatibilities(incompatCount);
+        List<int[]> incompatiblePairs = extractPairs(lines.get(supplyCostEnd + 1));
+        instance.setIncompatiblePairs(incompatiblePairs);
+
+        // Set up incompatible stores
+        for (int[] pair : incompatiblePairs) {
+            int store1 = pair[0] - 1;
+            int store2 = pair[1] - 1;
+            if (store1 < 0 || store1 >= stores.size() || store2 < 0 || store2 >= stores.size()) {
+                throw new IllegalArgumentException("Incompatible pair index out of bounds: " + Arrays.toString(pair));
+            }
+            instance.getStoreList().get(store1).addIncompatibleStore(store2);
+            instance.getStoreList().get(store2).addIncompatibleStore(store1);
+        }
 
         return instance;
     }
 
+    // Helper methods remain unchanged
     private static int extractSingleValue(String line) {
         Matcher matcher = Pattern.compile("\\d+").matcher(line);
         return matcher.find() ? Integer.parseInt(matcher.group()) : 0;
@@ -69,15 +101,12 @@ public class MiniZincParser {
 
     private static List<int[]> extractPairs(String line) {
         List<int[]> pairs = new ArrayList<>();
-
         line = line.replace("[|", "").replace("|]", "").trim();
-
         String[] pairStrings = line.split("\\|");
         for (String pairString : pairStrings) {
             pairString = pairString.trim();
             if (!pairString.isEmpty()) {
                 pairString = pairString.replaceAll("[^0-9,]", "").trim();
-
                 String[] numbers = pairString.split(",");
                 if (numbers.length == 2) {
                     int first = Integer.parseInt(numbers[0].trim());
@@ -92,22 +121,22 @@ public class MiniZincParser {
     public static void main(String[] args) {
         try {
             InstanceData instance = parseFile("problem/src/inputs/input1.txt");
-            System.out.println("Warehouses: " + instance.getWarehouses());
-            System.out.println("Stores: " + instance.getStores());
-            System.out.println("Capacity: " + instance.getCapacity());
-            System.out.println("Fixed Cost: " + instance.getFixedCost());
-            System.out.println("Goods: " + instance.getGoods());
-            System.out.println("Supply Cost: " + Arrays.deepToString(instance.getSupplyCost()));
+            System.out.println("Warehouse count: " + instance.getWarehouseList().size());
+            System.out.println("Store count: " + instance.getStoreList().size());
+            System.out.println("Warehouse Capacities: " +
+                    instance.getWarehouseList().stream().map(WarehouseClass::getCapacity).toList());
+            System.out.println("Warehouse Fixed Costs: " +
+                    instance.getWarehouseList().stream().map(WarehouseClass::getOpeningCost).toList());
+            System.out.println("Store Demands: " +
+                    instance.getStoreList().stream().map(StoreClass::getDemand).toList());
+            System.out.println("Supply Costs: " +
+                    instance.getSupplyList().stream().map(SupplyClass::getCost).toList());
             System.out.println("Incompatibilities: " + instance.getIncompatibilities());
             System.out.print("Incompatible Pairs: ");
             for (int[] pair : instance.getIncompatiblePairs()) {
-                System.out.print(Arrays.toString(pair) +", ");
+                System.out.print(Arrays.toString(pair) + ", ");
             }
-
-            InitialSolution initialSolution = new InitialSolution();
-            initialSolution.generateInitialSolution(instance);
-
-            System.out.println(initialSolution);
+            System.out.println();
         } catch (IOException e) {
             e.printStackTrace();
         }
