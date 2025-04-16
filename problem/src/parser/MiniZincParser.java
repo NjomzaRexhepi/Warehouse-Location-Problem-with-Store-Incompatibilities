@@ -41,11 +41,12 @@ public class MiniZincParser {
         int supplyCostEnd = supplyCostStart + stores.size(); // Use store list size instead of stores count
         int[][] supplyCostMatrix = extractMatrix(lines.subList(supplyCostStart, supplyCostEnd));
         List<SupplyClass> supplies = new ArrayList<>();
-        for (int i = 0; i < warehouses.size(); i++) {
-            for (int j = 0; j < stores.size(); j++) {
-                supplies.add(new SupplyClass(i, j, 0, supplyCostMatrix[j][i])); // quantity set to 0 initially
+        for (int i = 0; i < stores.size(); i++) {
+            for (int j = 0; j < warehouses.size(); j++) {
+                supplies.add(new SupplyClass(j, i, 0, supplyCostMatrix[i][j]));
             }
         }
+
         instance.setSupplyList(supplies);
 
         // Parse incompatibilities
