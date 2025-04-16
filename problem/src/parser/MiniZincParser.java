@@ -9,12 +9,13 @@ public class MiniZincParser {
     public static InstanceData parseFile(String filePath) throws IOException {
         InstanceData instance = new InstanceData();
         List<String> lines = new ArrayList<>();
-
-        // Read the file
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
             while ((line = br.readLine()) != null) {
-                lines.add(line.trim());
+                line = line.trim();
+                if (!line.isEmpty()) {
+                    lines.add(line);
+                }
             }
         }
 
@@ -120,7 +121,7 @@ public class MiniZincParser {
 
     public static void main(String[] args) {
         try {
-            InstanceData instance = parseFile("problem/src/inputs/input1.txt");
+            InstanceData instance = parseFile("problem/src/inputs/toy.dzn");
             System.out.println("Warehouse count: " + instance.getWarehouseList().size());
             System.out.println("Store count: " + instance.getStoreList().size());
             System.out.println("Warehouse Capacities: " +
