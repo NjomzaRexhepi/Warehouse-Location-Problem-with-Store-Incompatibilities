@@ -199,5 +199,118 @@ public class Solver {
         System.out.println("Total Score (Cost): " + totalCost);
     }
 
+    public static int[][] swapStores(int storeA, int storeB, int[][] solutionMatrix, InstanceData instance) {
+        List<WarehouseClass> warehouses = instance.getWarehouseList();
+        List<int[]> incompatiblePairs = instance.getIncompatiblePairs();
+        int nWarehouses = warehouses.size();
+
+        // Create a copy of the solution matrix to modify
+        int[][] newSolution = new int[solutionMatrix.length][];
+        for (int i = 0; i < solutionMatrix.length; i++) {
+            newSolution[i] = solutionMatrix[i].clone();
+        }
+
+        // Get current assignments for both stores
+        int[] storeAAssignments = newSolution[storeA];
+        int[] storeBAssignments = newSolution[storeB];
+
+        // Check if stores are compatible to be swapped
+        if (!canSwapStores(storeA, storeB, storeAAssignments, storeBAssignments, incompatiblePairs, warehouses)) {
+            System.out.println("Stores cannot be swapped due to incompatibility or capacity constraints");
+            return solutionMatrix; // return original solution
+        }
+
+        // Calculate remaining capacities
+        int[] remainingCapacity = new int[nWarehouses];
+        for (int j = 0; j < nWarehouses; j++) {
+            int usedCapacity = 0;
+            for (int i = 0; i < newSolution.length; i++) {
+                if (i != storeA && i != storeB) {
+                    usedCapacity += newSolution[i][j];
+                }
+            }
+            remainingCapacity[j] = warehouses.get(j).getCapacity() - usedCapacity;
+        }
+
+        // Calculate total demand for each store
+        int storeADemand = Arrays.stream(storeAAssignments).sum();
+        int storeBDemand = Arrays.stream(storeBAssignments).sum();
+
+        // Clear current assignments (we'll rebuild them)
+        Arrays.fill(newSolution[storeA], 0);
+        Arrays.fill(newSolution[storeB], 0);
+
+        // Try to assign storeB to storeA's original warehouses
+        int remainingStoreBDemand = storeBDemand;
+        for (int j = 0; j < nWarehouses && remainingStoreBDemand > 0; j++) {
+            if (storeAAssignments[j] > 0) {
+                int assignAmount = Math.min(remainingStoreBDemand, remainingCapacity[j]);
+                if (assignAmount > 0) {
+                    newSolution[storeB][j] = assignAmount;
+                    remainingStoreBDemand -= assignAmount;
+                    remainingCapacity[j] -= assignAmount;
+                }
+            }
+        }
+
+        // Try to assign storeA to storeB's original warehouses
+        int remainingStoreADemand = storeADemand;
+        for (int j = 0; j < nWarehouses && remainingStoreADemand > 0; j++) {
+            if (storeBAssignments[j] > 0) {
+                int assignAmount = Math.min(remainingStoreADemand, remainingCapacity[j]);
+                if (assignAmount > 0) {
+                    newSolution[storeA][j] = assignAmount;
+                    remainingStoreADemand -= assignAmount;
+                    remainingCapacity[j] -= assignAmount;
+                }
+            }
+        }
+
+        // If we couldn't fully assign, try other warehouses
+        for (int j = 0; j < nWarehouses && (remainingStoreADemand > 0 || remainingStoreBDemand > 0); j++) {
+            if (remainingStoreADemand > 0 && remainingCapacity[j] > 0) {
+                int assignAmount = Math.min(remainingStoreADemand, remainingCapacity[j]);
+                newSolution[storeA][j] += assignAmount;
+                remainingStoreADemand -= assignAmount;
+                remainingCapacity[j] -= assignAmount;
+            }
+            if (remainingStoreBDemand > 0 && remainingCapacity[j] > 0) {
+                int assignAmount = Math.min(remainingStoreBDemand, remainingCapacity[j]);
+                newSolution[storeB][j] += assignAmount;
+                remainingStoreBDemand -= assignAmount;
+                remainingCapacity[j] -= assignAmount;
+            }
+        }
+
+        if (remainingStoreADemand > 0 || remainingStoreBDemand > 0) {
+            System.out.println("Warning: Could not fully satisfy demand after swap");
+            System.out.println("Remaining demand for storeA: " + remainingStoreADemand);
+            System.out.println("Remaining demand for storeB: " + remainingStoreBDemand);
+        }
+
+        return newSolution;
+    }
+
+    private static boolean canSwapStores(int storeA, int storeB, int[] storeAAssignments, int[] storeBAssignments,
+                                         List<int[]> incompatiblePairs, List<WarehouseClass> warehouses) {
+        int storeA1Based = storeA + 1;
+        int storeB1Based = storeB + 1;
+        for (int[] pair : incompatiblePairs) {
+            if ((pair[0] == storeA1Based && pair[1] == storeB1Based) ||
+                    (pair[0] == storeB1Based && pair[1] == storeA1Based)) {
+                return false;
+            }
+        }
+
+        int nWarehouses = warehouses.size();
+        int[] remainingCapacity = new int[nWarehouses];
+        for (int j = 0; j < nWarehouses; j++) {
+            remainingCapacity[j] = warehouses.get(j).getCapacity();
+        }
+
+
+
+
+    }
 
 }
