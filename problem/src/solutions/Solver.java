@@ -307,12 +307,24 @@ public class Solver {
         for (int j = 0; j < nWarehouses; j++) {
             remainingCapacity[j] = warehouses.get(j).getCapacity();
         }
-        ///
 
-///
+        int storeADemand = Arrays.stream(storeAAssignments).sum();
+        int storeBDemand = Arrays.stream(storeBAssignments).sum();
 
-        return false;
+        int storeAAvailableCapacity = 0;
+        for (int j = 0; j < nWarehouses; j++) {
+            if (storeAAssignments[j] > 0) {
+                storeAAvailableCapacity += warehouses.get(j).getCapacity();
+            }
+        }
 
+        int storeBAvailableCapacity = 0;
+        for (int j = 0; j < nWarehouses; j++) {
+            if (storeBAssignments[j] > 0) {
+                storeBAvailableCapacity += warehouses.get(j).getCapacity();
+            }
+        }
+        return storeBDemand <= storeAAvailableCapacity && storeADemand <= storeBAvailableCapacity;
 
     }
 
