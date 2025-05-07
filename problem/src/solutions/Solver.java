@@ -328,4 +328,10 @@ public class Solver {
 
     }
 
+
+//    public static int[][] moveGoods(int storeIndex, int fromWHIndex, int toWHIndex, int quantity,
+//                                    int[][] solutionMatrix, InstanceData instance) {
+//
+//    }
+
 }
