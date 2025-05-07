@@ -73,7 +73,7 @@ public class Solver {
 
         writeSolution(solutionMatrix, nStores, nWarehouses, fileName);
         printScore(instance, solutionMatrix);
-
+        swapStores(1,2, solutionMatrix,instance); // Just for testing these 2 stores are sent as hardcoded params ( TO BE UPDATED)
     }
 
     private static boolean canAssignStore(int storeIndex, Set<Integer> assignedStores, List<int[]> incompatiblePairs) {
