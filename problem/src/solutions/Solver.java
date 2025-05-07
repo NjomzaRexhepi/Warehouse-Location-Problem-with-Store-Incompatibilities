@@ -307,6 +307,7 @@ public class Solver {
         for (int j = 0; j < nWarehouses; j++) {
             remainingCapacity[j] = warehouses.get(j).getCapacity();
         }
+        ///
 
 
 
