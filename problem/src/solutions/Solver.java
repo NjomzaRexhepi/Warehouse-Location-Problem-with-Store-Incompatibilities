@@ -14,7 +14,7 @@ import java.util.*;
 
 public class Solver {
 
-    public static void solver(InstanceData instance) {
+    public static void solver(InstanceData instance, String fileName) {
 
         List<WarehouseClass> warehouses = instance.getWarehouseList();
         List<StoreClass> stores = instance.getStoreList();
@@ -71,7 +71,7 @@ public class Solver {
             }
         }
 
-        writeSolution(solutionMatrix, nStores, nWarehouses);
+        writeSolution(solutionMatrix, nStores, nWarehouses, fileName);
         printScore(instance, solutionMatrix);
 
     }
@@ -91,10 +91,20 @@ public class Solver {
         return true;
     }
 
-    private static void writeSolution(int[][] solutionMatrix, int nStores, int nWarehouses) {
+    private static void writeSolution(int[][] solutionMatrix, int nStores, int nWarehouses, String fileName) {
         File outputDir = new File("problem/src/outputs");
 
-        File outputFile = new File(outputDir, "solution.txt");
+// Create the directory if it does not exist
+        if (!outputDir.exists()) {
+            boolean dirsCreated = outputDir.mkdirs();
+            if (!dirsCreated) {
+                System.err.println("Failed to create directory: " + outputDir.getAbsolutePath());
+                return;
+            }
+        }
+
+// Use fileName as the name of the output file (with .txt extension)
+        File outputFile = new File(outputDir, fileName + ".txt");
 
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
             bw.write("[\n");
@@ -118,6 +128,7 @@ public class Solver {
             System.err.println("Error writing solution file: " + e.getMessage());
             e.printStackTrace();
         }
+
     }
 
     private static int[][] buildCostMatrix(InstanceData instance, int nStores, int nWarehouses) {
@@ -134,13 +145,13 @@ public class Solver {
 
             // Check bounds. If either index is out of bounds or negative, print a warning and skip.
             if (storeIndex < 0 || storeIndex >= nStores) {
-                System.err.println("Warning: storeId " + storeId + " produces index " + storeIndex +
-                        ", which is out of bounds (nStores=" + nStores + "). Skipping this record.");
+//                System.err.println("Warning: storeId " + storeId + " produces index " + storeIndex +
+//                        ", which is out of bounds (nStores=" + nStores + "). Skipping this record.");
                 continue;
             }
             if (warehouseIndex < 0 || warehouseIndex >= nWarehouses) {
-                System.err.println("Warning: warehouseId " + warehouseId + " produces index " + warehouseIndex +
-                        ", which is out of bounds (nWarehouses=" + nWarehouses + "). Skipping this record.");
+//                System.err.println("Warning: warehouseId " + warehouseId + " produces index " + warehouseIndex +
+//                        ", which is out of bounds (nWarehouses=" + nWarehouses + "). Skipping this record.");
                 continue;
             }
             costMatrix[storeIndex][warehouseIndex] = cost;
