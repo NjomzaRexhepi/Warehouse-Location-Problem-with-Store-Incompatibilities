@@ -73,7 +73,15 @@ public class Solver {
 
         writeSolution(solutionMatrix, nStores, nWarehouses, fileName);
         printScore(instance, solutionMatrix);
-        swapStores(1,2, solutionMatrix,instance); // Just for testing these 2 stores are sent as hardcoded params ( TO BE UPDATED)
+//        swapStores(solutionMatrix,instance); TO BE UPDATED
+        Random rnd = new Random();
+        int a = rnd.nextInt(nStores);
+        int b;
+        do { b = rnd.nextInt(nStores); } while (b == a);
+
+// attempt the operator
+//        swapStores(a, b, solutionMatrix, instance, nStores, nWarehouses, fileName);
+        bestSwapStores(solutionMatrix, instance);
     }
 
     private static boolean canAssignStore(int storeIndex, Set<Integer> assignedStores, List<int[]> incompatiblePairs) {
@@ -160,7 +168,7 @@ public class Solver {
     }
 
 
-    public static void printScore(InstanceData instance, int[][] solutionMatrix) {
+    public static int printScore(InstanceData instance, int[][] solutionMatrix) {
         int totalSupplyCost = 0;
         int totalFixedCost = 0;
 
@@ -197,98 +205,8 @@ public class Solver {
         System.out.println("Total Supply Cost: " + totalSupplyCost);
         System.out.println("Total Opening Cost: " + totalFixedCost);
         System.out.println("Total Score (Cost): " + totalCost);
-    }
 
-    public static int[][] swapStores(int storeA, int storeB, int[][] solutionMatrix, InstanceData instance) {
-        List<WarehouseClass> warehouses = instance.getWarehouseList();
-        List<int[]> incompatiblePairs = instance.getIncompatiblePairs();
-        int nWarehouses = warehouses.size();
-
-        // Create a copy of the solution matrix to modify
-        int[][] newSolution = new int[solutionMatrix.length][];
-        for (int i = 0; i < solutionMatrix.length; i++) {
-            newSolution[i] = solutionMatrix[i].clone();
-        }
-
-        // Get current assignments for both stores
-        int[] storeAAssignments = newSolution[storeA];
-        int[] storeBAssignments = newSolution[storeB];
-
-        // Check if stores are compatible to be swapped
-        if (!canSwapStores(storeA, storeB, storeAAssignments, storeBAssignments, incompatiblePairs, warehouses)) {
-            System.out.println("Stores cannot be swapped due to incompatibility or capacity constraints");
-            return solutionMatrix; // return original solution
-        }
-
-        // Calculate remaining capacities
-        int[] remainingCapacity = new int[nWarehouses];
-        for (int j = 0; j < nWarehouses; j++) {
-            int usedCapacity = 0;
-            for (int i = 0; i < newSolution.length; i++) {
-                if (i != storeA && i != storeB) {
-                    usedCapacity += newSolution[i][j];
-                }
-            }
-            remainingCapacity[j] = warehouses.get(j).getCapacity() - usedCapacity;
-        }
-
-        // Calculate total demand for each store
-        int storeADemand = Arrays.stream(storeAAssignments).sum();
-        int storeBDemand = Arrays.stream(storeBAssignments).sum();
-
-        // Clear current assignments (we'll rebuild them)
-        Arrays.fill(newSolution[storeA], 0);
-        Arrays.fill(newSolution[storeB], 0);
-
-        // Try to assign storeB to storeA's original warehouses
-        int remainingStoreBDemand = storeBDemand;
-        for (int j = 0; j < nWarehouses && remainingStoreBDemand > 0; j++) {
-            if (storeAAssignments[j] > 0) {
-                int assignAmount = Math.min(remainingStoreBDemand, remainingCapacity[j]);
-                if (assignAmount > 0) {
-                    newSolution[storeB][j] = assignAmount;
-                    remainingStoreBDemand -= assignAmount;
-                    remainingCapacity[j] -= assignAmount;
-                }
-            }
-        }
-
-        // Try to assign storeA to storeB's original warehouses
-        int remainingStoreADemand = storeADemand;
-        for (int j = 0; j < nWarehouses && remainingStoreADemand > 0; j++) {
-            if (storeBAssignments[j] > 0) {
-                int assignAmount = Math.min(remainingStoreADemand, remainingCapacity[j]);
-                if (assignAmount > 0) {
-                    newSolution[storeA][j] = assignAmount;
-                    remainingStoreADemand -= assignAmount;
-                    remainingCapacity[j] -= assignAmount;
-                }
-            }
-        }
-
-        // If we couldn't fully assign, try other warehouses
-        for (int j = 0; j < nWarehouses && (remainingStoreADemand > 0 || remainingStoreBDemand > 0); j++) {
-            if (remainingStoreADemand > 0 && remainingCapacity[j] > 0) {
-                int assignAmount = Math.min(remainingStoreADemand, remainingCapacity[j]);
-                newSolution[storeA][j] += assignAmount;
-                remainingStoreADemand -= assignAmount;
-                remainingCapacity[j] -= assignAmount;
-            }
-            if (remainingStoreBDemand > 0 && remainingCapacity[j] > 0) {
-                int assignAmount = Math.min(remainingStoreBDemand, remainingCapacity[j]);
-                newSolution[storeB][j] += assignAmount;
-                remainingStoreBDemand -= assignAmount;
-                remainingCapacity[j] -= assignAmount;
-            }
-        }
-
-        if (remainingStoreADemand > 0 || remainingStoreBDemand > 0) {
-            System.out.println("Warning: Could not fully satisfy demand after swap");
-            System.out.println("Remaining demand for storeA: " + remainingStoreADemand);
-            System.out.println("Remaining demand for storeB: " + remainingStoreBDemand);
-        }
-
-        return newSolution;
+        return totalCost;
     }
 
     private static boolean canSwapStores(int storeA, int storeB, int[] storeAAssignments, int[] storeBAssignments,
@@ -328,10 +246,106 @@ public class Solver {
 
     }
 
+    public static boolean swapStores(int storeA,
+                                     int storeB,
+                                     int[][] solutionMatrix,
+                                     InstanceData instance,
+                                     int nStores,
+                                     int nWarehouses,
+                                     String fileName) {
+
+        List<int[]> incompatiblePairs = instance.getIncompatiblePairs();
+        List<WarehouseClass> warehouses = instance.getWarehouseList();
+
+        int[] storeAAssignments = solutionMatrix[storeA];
+        int[] storeBAssignments = solutionMatrix[storeB];
+
+        // 1. feasibility check
+        if (!canSwapStores(storeA, storeB,
+                storeAAssignments, storeBAssignments,
+                incompatiblePairs, warehouses)) {
+            System.out.printf("Swap of store %d and %d infeasible%n",
+                    storeA + 1, storeB + 1);
+            return false;
+        }
+        // 3. perform the swap (deep copy row-wise)
+        for (int w = 0; w < warehouses.size(); w++) {
+            int tmp = solutionMatrix[storeA][w];
+            solutionMatrix[storeA][w] = solutionMatrix[storeB][w];
+            solutionMatrix[storeB][w] = tmp;
+        }
+
+        // 4. compute score AFTER swap
+        System.out.println("--- After swap  ---");
+        printScore(instance, solutionMatrix);
+
+        writeSolution(solutionMatrix, nStores, nWarehouses, fileName);
+
+        return true;
+    }
 
 //    public static int[][] moveGoods(int storeIndex, int fromWHIndex, int toWHIndex, int quantity,
 //                                    int[][] solutionMatrix, InstanceData instance) {
 //
 //    }
+
+    private static int getSupplyCost(int storeIdx,
+                                     int whIdx,
+                                     int[][] costMatrix) {
+        return costMatrix[storeIdx][whIdx];   // matrix already 0-based
+    }
+
+    public static boolean bestSwapStores(int[][] sol, InstanceData ins) {
+
+        int nStores     = sol.length;
+        int nWarehouses = ins.getWarehouseList().size();
+        List<int[]> incomp = ins.getIncompatiblePairs();
+
+        // Build cost matrix once (reuses your existing code)
+        int[][] costM = buildCostMatrix(ins, nStores, nWarehouses);
+
+        int baseCost  = printScore(ins, sol);
+        int bestDelta = 0, bestA = -1, bestB = -1;
+
+        for (int i = 0; i < nStores; i++) {
+            for (int j = i + 1; j < nStores; j++) {
+
+                if (!canSwapStores(i, j, sol[i], sol[j], incomp,
+                        ins.getWarehouseList())) continue;
+
+                int delta = 0;
+                for (int w = 0; w < nWarehouses; w++) {
+                    int qi  = sol[i][w];
+                    int qj  = sol[j][w];
+
+                    int cIw = getSupplyCost(i, w, costM);
+                    int cJw = getSupplyCost(j, w, costM);
+
+                    delta += (qj - qi) * cIw + (qi - qj) * cJw;
+                }
+
+                if (delta < bestDelta) {          // improvement
+                    bestDelta = delta;
+                    bestA = i; bestB = j;
+                }
+            }
+        }
+
+        if (bestA == -1) {
+            System.out.println("No improving swap exists.");
+            return false;
+        }
+
+        // Apply swap
+        for (int w = 0; w < nWarehouses; w++) {
+            int tmp = sol[bestA][w];
+            sol[bestA][w] = sol[bestB][w];
+            sol[bestB][w] = tmp;
+        }
+
+        System.out.printf("Swap %d ↔︎ %d improved cost by %d → new score %d%n",
+                bestA + 1, bestB + 1, bestDelta, baseCost + bestDelta);
+        return true;
+    }
 
 }
