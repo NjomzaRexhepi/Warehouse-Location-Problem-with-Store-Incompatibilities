@@ -81,7 +81,8 @@ public class Solver {
 
 // attempt the operator
 //        swapStores(a, b, solutionMatrix, instance, nStores, nWarehouses, fileName);
-        bestSwapStores(solutionMatrix, instance);
+       // bestSwapStores(solutionMatrix, instance);
+        bestMoveGoods(solutionMatrix, instance);
     }
 
     private static boolean canAssignStore(int storeIndex, Set<Integer> assignedStores, List<int[]> incompatiblePairs) {
@@ -284,10 +285,81 @@ public class Solver {
         return true;
     }
 
-//    public static int[][] moveGoods(int storeIndex, int fromWHIndex, int toWHIndex, int quantity,
-//                                    int[][] solutionMatrix, InstanceData instance) {
-//
-//    }
+
+    public static boolean bestMoveGoods(int[][] sol, InstanceData ins) {
+        int nStores = sol.length;
+        int nWarehouses = ins.getWarehouseList().size();
+        int[][] costM = buildCostMatrix(ins, nStores, nWarehouses);
+        int baseCost = printScore(ins, sol);
+        int bestDelta = 0;
+        int bestStore = -1, bestFromWH = -1, bestToWH = -1, bestQuantity = 0;
+
+        for (int i = 0; i < nStores; i++) {
+            for (int fromWH = 0; fromWH < nWarehouses; fromWH++) {
+                if (sol[i][fromWH] <= 0) continue;
+
+                for (int toWH = 0; toWH < nWarehouses; toWH++) {
+                    if (fromWH == toWH) continue;
+
+                    // Calculate maximum possible quantity to move
+                    int maxMove = sol[i][fromWH];
+                    int currentUsage = 0;
+                    for (int s = 0; s < nStores; s++) {
+                        currentUsage += sol[s][toWH];
+                    }
+                    int availableCapacity = ins.getWarehouseList().get(toWH).getCapacity() - currentUsage;
+                    int quantity = Math.min(maxMove, availableCapacity);
+                    if (quantity <= 0) continue;
+
+                    // Check incompatibilities
+                    Set<Integer> storesInToWH = new HashSet<>();
+                    for (int s = 0; s < nStores; s++) {
+                        if (sol[s][toWH] > 0) {
+                            storesInToWH.add(s);
+                        }
+                    }
+                    boolean compatible = true;
+                    int store1Based = i + 1;
+                    for (int otherStore : storesInToWH) {
+                        if (otherStore == i) continue;
+                        int otherStore1Based = otherStore + 1;
+                        for (int[] pair : ins.getIncompatiblePairs()) {
+                            if ((pair[0] == store1Based && pair[1] == otherStore1Based) ||
+                                    (pair[0] == otherStore1Based && pair[1] == store1Based)) {
+                                compatible = false;
+                                break;
+                            }
+                        }
+                        if (!compatible) break;
+                    }
+                    if (!compatible) continue;
+
+                    // Calculate cost delta
+                    int delta = quantity * (costM[i][toWH] - costM[i][fromWH]);
+                    if (delta < bestDelta) {
+                        bestDelta = delta;
+                        bestStore = i;
+                        bestFromWH = fromWH;
+                        bestToWH = toWH;
+                        bestQuantity = quantity;
+                    }
+                }
+            }
+        }
+
+        if (bestStore == -1) {
+            System.out.println("No improving move exists.");
+            return false;
+        }
+
+        // Apply the best move
+        sol[bestStore][bestFromWH] -= bestQuantity;
+        sol[bestStore][bestToWH] += bestQuantity;
+
+        System.out.printf("Move %d units of store %d from WH %d to WH %d improved cost by %d → new score %d%n",
+                bestQuantity, bestStore + 1, bestFromWH + 1, bestToWH + 1, bestDelta, baseCost + bestDelta);
+        return true;
+    }
 
     private static int getSupplyCost(int storeIdx,
                                      int whIdx,
