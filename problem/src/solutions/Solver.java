@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.IntStream;
 
 public class Solver {
 
@@ -100,44 +101,43 @@ public class Solver {
         return true;
     }
 
-    private static void writeSolution(int[][] solutionMatrix, int nStores, int nWarehouses, String fileName) {
-        File outputDir = new File("problem/src/outputs");
+    private static void writeSolution(int[][] solutionMatrix,
+                                      int nStores,
+                                      int nWarehouses,
+                                      String fileName) {
 
-// Create the directory if it does not exist
-        if (!outputDir.exists()) {
-            boolean dirsCreated = outputDir.mkdirs();
-            if (!dirsCreated) {
-                System.err.println("Failed to create directory: " + outputDir.getAbsolutePath());
-                return;
-            }
+        File outputDir = new File("problem/src/outputs");
+        if (!outputDir.exists() && !outputDir.mkdirs()) {
+            System.err.println("Failed to create directory: " + outputDir.getAbsolutePath());
+            return;
         }
 
-// Use fileName as the name of the output file (with .txt extension)
         File outputFile = new File(outputDir, fileName + ".txt");
 
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
-            bw.write("[\n");
-            for (int i = 0; i < nStores; i++) {
-                bw.write("(");
-                for (int j = 0; j < nWarehouses; j++) {
-                    bw.write(String.valueOf(solutionMatrix[i][j]));
-                    if (j < nWarehouses - 1) {
-                        bw.write(",");
-                    }
-                }
-                bw.write(")");
-                if (i < nStores - 1) {
-                    bw.write("\n");
+
+            bw.write("{");
+
+            boolean first = true;
+            for (int s = 0; s < nStores; s++) {
+                for (int w = 0; w < nWarehouses; w++) {
+                    int q = solutionMatrix[s][w];
+                    if (q <= 0) continue;                // skip zero quantities
+
+                    if (!first) bw.write(", ");
+                    bw.write("(" + (s + 1) + "," + (w + 1) + "," + q + ")");
+                    first = false;
                 }
             }
-            bw.write("\n]");
+
+            bw.write("}");
             bw.flush();
             System.out.println("Solution saved to: " + outputFile.getAbsolutePath());
+
         } catch (IOException e) {
             System.err.println("Error writing solution file: " + e.getMessage());
             e.printStackTrace();
         }
-
     }
 
     private static int[][] buildCostMatrix(InstanceData instance, int nStores, int nWarehouses) {
@@ -203,8 +203,8 @@ public class Solver {
         }
 
         int totalCost = totalSupplyCost + totalFixedCost;
-        System.out.println("Total Supply Cost: " + totalSupplyCost);
-        System.out.println("Total Opening Cost: " + totalFixedCost);
+//        System.out.println("Total Supply Cost: " + totalSupplyCost);
+//        System.out.println("Total Opening Cost: " + totalFixedCost);
         System.out.println("Total Score (Cost): " + totalCost);
 
         return totalCost;
@@ -419,5 +419,155 @@ public class Solver {
                 bestA + 1, bestB + 1, bestDelta, baseCost + bestDelta);
         return true;
     }
+
+
+
+    public static int[][] simulatedAnnealing(InstanceData instance,
+                                             int    maxIter,
+                                             double t0,
+                                             double alpha,
+                                             String fileName) {
+
+        int nW  = instance.getWarehouseList().size();
+        int nS  = instance.getStoreList().size();
+        int[][] curr = buildInitialSolution(instance, nS, nW);
+        int currCost  = printScore(instance, curr);
+
+        int[][] best  = deepCopy(curr);
+        int bestCost  = currCost;
+
+        Random rng = new Random(2025);
+        double T = t0;
+
+        for (int k = 0; k < maxIter && T > 1e-3; k++) {
+
+            int[][] neigh  = deepCopy(curr);
+            generateNeighbour(neigh, instance, rng);
+            int neighCost  = printScore(instance, neigh);
+            int  delta     = neighCost - currCost;
+
+            if (delta < 0 || Math.exp(-delta / T) > rng.nextDouble()) {
+                curr = neigh;
+                currCost = neighCost;
+                if (currCost < bestCost) {
+                    best     = deepCopy(curr);
+                    bestCost = currCost;
+                }
+            }
+            T *= alpha;
+        }
+
+        writeSolution(best, nS, nW, fileName);
+        System.out.printf("SA finished: best cost = %d%n", bestCost);
+        return best;
+    }
+
+
+    private static int[][] buildInitialSolution(InstanceData instance, int nStores, int nWarehouses) {
+
+        int[][] sol = new int[nStores][nWarehouses];
+        int[]   remCap = new int[nWarehouses];
+        for (int j = 0; j < nWarehouses; j++)
+            remCap[j] = instance.getWarehouseList().get(j).getCapacity();
+
+        List<Set<Integer>> whStores = new ArrayList<>();
+        for (int j = 0; j < nWarehouses; j++) whStores.add(new HashSet<>());
+
+
+        int[][] costM = buildCostMatrix(instance, nStores, nWarehouses);
+
+        Integer[] storeIdx = IntStream.range(0, nStores).boxed().toArray(Integer[]::new);
+
+        Arrays.sort(storeIdx, (a, b) ->
+                Integer.compare(
+                        instance.getStoreList().get(b).getDemand(),
+                        instance.getStoreList().get(a).getDemand()));
+
+        for (int i : storeIdx) {
+            int demand = instance.getStoreList().get(i).getDemand();
+            int rest   = demand;
+
+            Integer[] whIdx = IntStream.range(0, nWarehouses).boxed().toArray(Integer[]::new);
+            Arrays.sort(whIdx, Comparator.comparingInt(j -> costM[i][j]));
+
+            for (int j : whIdx) {
+                if (!canAssignStore(i, whStores.get(j), instance.getIncompatiblePairs())) continue;
+                int q = Math.min(remCap[j], rest);
+                if (q == 0) continue;
+                sol[i][j] += q;
+                remCap[j] -= q;
+                rest      -= q;
+                whStores.get(j).add(i);
+                if (rest == 0) break;
+            }
+            if (rest > 0)
+                System.err.printf("Initial heuristic warning – unsatisfied demand for store %d%n", i + 1);
+        }
+        return sol;
+    }
+
+
+    private static void generateNeighbour(int[][] sol, InstanceData ins, Random rng) {
+
+        if (rng.nextBoolean()) {
+            int s = rng.nextInt(sol.length);
+            int fromWH = rng.nextInt(sol[0].length);
+            if (sol[s][fromWH] == 0) return;
+
+            int toWH = rng.nextInt(sol[0].length);
+            if (toWH == fromWH) return;
+
+            int qty = 1 + rng.nextInt(sol[s][fromWH]);
+            if (!isMoveFeasible(s, fromWH, toWH, qty, sol, ins)) return;
+
+            sol[s][fromWH] -= qty;
+            sol[s][toWH]   += qty;
+
+        } else {
+            int a = rng.nextInt(sol.length);
+            int b;
+            do { b = rng.nextInt(sol.length); } while (b == a);
+
+            if (!canSwapStores(a, b, sol[a], sol[b],
+                    ins.getIncompatiblePairs(), ins.getWarehouseList()))
+                return;
+
+            for (int w = 0; w < sol[0].length; w++) {
+                int tmp = sol[a][w]; sol[a][w] = sol[b][w]; sol[b][w] = tmp;
+            }
+        }
+    }
+
+    private static boolean isMoveFeasible(int storeIdx, int fromWH, int toWH, int qty,
+                                          int[][] sol, InstanceData ins) {
+
+
+        int used = 0;
+        for (int s = 0; s < sol.length; s++) used += sol[s][toWH];
+        int cap  = ins.getWarehouseList().get(toWH).getCapacity();
+        if (used + qty > cap) return false;
+
+
+        Set<Integer> inToWH = new HashSet<>();
+        for (int s = 0; s < sol.length; s++) if (sol[s][toWH] > 0) inToWH.add(s);
+        int s1 = storeIdx + 1;
+        for (int other : inToWH) {
+            int o1 = other + 1;
+            for (int[] p : ins.getIncompatiblePairs())
+                if ((p[0]==s1 && p[1]==o1) || (p[1]==s1 && p[0]==o1))
+                    return false;
+        }
+        return true;
+    }
+
+
+    private static int[][] deepCopy(int[][] m) {
+        int[][] c = new int[m.length][];
+        for (int i = 0; i < m.length; i++) c[i] = m[i].clone();
+        return c;
+    }
+
+
+
 
 }
