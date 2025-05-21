@@ -21,7 +21,12 @@ public class Main {
         ArrayList<InstanceData> instance = new ArrayList<>();
 
         for (String input : inputs) {
-            Solver.solver(MiniZincParser.parseFile(input), input.replace("problem/src/inputs/",""));
+//            Solver.solver(MiniZincParser.parseFile(input), input.replace("problem/src/inputs/",""));
+            Solver.simulatedAnnealing(MiniZincParser.parseFile(input),
+                    150_000,   // iterations
+                    10_000,    // starting temperature
+                    0.995,     // cooling rate
+                    input.replace("problem/src/inputs/",""));
         }
 
 //        InitialSolution solution = new InitialSolution();
